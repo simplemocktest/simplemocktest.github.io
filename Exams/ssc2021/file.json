@@ -1,0 +1,35 @@
+{
+  "id": "ssc2021_exam_01",
+  "title": "SSC Previous year question - 2021",
+  "duration": 5,
+  "questions": [
+    {
+      "id": 1,
+      "text": "What is 2 + 2?",
+      "options": ["3", "4", "5", "6"],
+      "correctAnswer": 1,
+      "solution": "2 + 2 = 4",
+      "image": "/Exams/ssc2021/images/1.svg",
+      "optionImages": [
+        "/Exams/ssc2021/images/1.svg",
+        "/Exams/ssc2021/images/1.svg",
+        "/Exams/ssc2021/images/1.svg",
+        "/Exams/ssc2021/images/1.svg"
+      ]
+    },
+    {
+      "id": 2,
+      "text": "What is 5 x 3?",
+      "options": ["10", "15", "20", "25"],
+      "correctAnswer": 1,
+      "solution": "5 x 3 = 15",
+      "image": "/Exams/ssc2021/images/1.svg",
+      "optionImages": [
+        "/Exams/ssc2021/images/1.svg",
+        "/Exams/ssc2021/images/1.svg",
+        "/Exams/ssc2021/images/1.svg",
+        "/Exams/ssc2021/images/1.svg"
+      ]
+    }
+  ]
+}

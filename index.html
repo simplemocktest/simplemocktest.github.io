@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mock Test Website</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <!-- Page 1: Exam List -->
+      <div id="examList">
+        <div>
+          <button id="fullscreenBtn">Fullscreen</button>
+          <!-- <button id="darkModeBtn">Dark Mode</button> -->
+        </div>
+        <input
+          type="text"
+          class="search-bar"
+          id="searchBar"
+          placeholder="Search exams..."
+        />
+        <ul class="exam-list" id="examListContainer">
+          <!-- Exam items will be dynamically added here -->
+        </ul>
+      </div>
+
+      <!-- Page 2: Question Page -->
+      <div id="questionPage" class="question-page">
+        <div class="topbar">
+          <span
+            >Question <span id="currentQuestion">1</span> of
+            <span id="totalQuestions">10</span></span
+          >
+          <span id="timer">00:00:00</span>
+        </div>
+        <div id="questionContainer"></div>
+        <img
+          id="questionImage"
+          class="question-image"
+          src=""
+          alt="Question Image"
+          style="display: none"
+        />
+        <ul class="options" id="optionsContainer"></ul>
+        <details id="solutionDetails">
+          <summary>View Solution</summary>
+          <div id="solutionContainer"></div>
+        </details>
+        <div class="bottombar">
+          <button id="prevButton" class="nav-button">Previous</button>
+          <button id="closeButton" class="nav-button">Close</button>
+          <button id="nextButton" class="nav-button">Next</button>
+        </div>
+      </div>
+
+      <!-- Page 3: Results Page -->
+      <div id="resultsPage" class="results-page">
+        <h2>Test Results</h2>
+        <p>Attended Questions: <span id="attendedQuestions">0</span></p>
+        <p>Unattended Questions: <span id="unattendedQuestions">0</span></p>
+      </div>
+
+      <footer class="footer">
+        © 2024 Mock Test Website. All rights reserved.
+      </footer>
+    </div>
+
+    <script>
+      let exams = [];
+      let currentExam = null;
+      let currentQuestionIndex = 0;
+      let answers = {};
+      let timerInterval;
+
+      async function loadExams() {
+        try {
+          exams = []; // Clear existing exams
+          const response = await fetch("/Exams/index.json");
+          if (response.ok) {
+            const examList = await response.json();
+            for (const examInfo of examList) {
+              try {
+                const examResponse = await fetch(
+                  `/Exams/${examInfo.directory}/${examInfo.file}`
+                );
+                if (examResponse.ok) {
+                  const examData = await examResponse.json();
+                  exams.push(examData);
+                }
+              } catch (error) {
+                console.error(
+                  `Error loading exam ${examInfo.directory}/${examInfo.file}:`,
+                  error
+                );
+              }
+            }
+          } else {
+            console.error("Failed to load exam index");
+          }
+
+          // Populate the exam list
+          populateExamList();
+        } catch (error) {
+          console.error("Error loading exams:", error);
+        }
+      }
+
+      function populateExamList(filter = "") {
+        const examListContainer = document.getElementById("examListContainer");
+        examListContainer.innerHTML = "";
+        exams
+          .filter((exam) =>
+            exam.title.toLowerCase().includes(filter.toLowerCase())
+          )
+          .forEach((exam) => {
+            const li = document.createElement("li");
+            li.className = "exam-item";
+            li.innerHTML = `
+          <span>${exam.title}</span>
+          <button class="start-exam" onclick="startExam('${exam.id}')">Start Exam</button>
+      `;
+            examListContainer.appendChild(li);
+          });
+      }
+
+      function startExam(examId) {
+        currentExam = exams.find((exam) => exam.id === examId);
+        currentQuestionIndex = 0;
+        answers = {};
+        document.getElementById("examList").style.display = "none";
+        document.getElementById("questionPage").style.display = "block";
+        loadQuestion();
+        startTimer(currentExam.duration * 60); // Convert minutes to seconds
+      }
+
+      function loadQuestion() {
+        const question = currentExam.questions[currentQuestionIndex];
+        document.getElementById("currentQuestion").textContent =
+          currentQuestionIndex + 1;
+        document.getElementById("totalQuestions").textContent =
+          currentExam.questions.length;
+        document.getElementById("questionContainer").textContent =
+          question.text;
+
+        const questionImage = document.getElementById("questionImage");
+        if (question.image) {
+          questionImage.src = question.image;
+          questionImage.style.display = "block";
+        } else {
+          questionImage.style.display = "none";
+        }
+
+        const optionsContainer = document.getElementById("optionsContainer");
+        optionsContainer.innerHTML = "";
+        question.options.forEach((option, index) => {
+          const li = document.createElement("li");
+          li.className = "option";
+          li.innerHTML = `
+          <input type="radio" name="answer" value="${index}" id="option${index}" ${
+            answers[question.id] === index ? "checked" : ""
+          }>
+          <label for="option${index}">${option}</label>
+          ${
+            question.optionImages
+              ? `<br><img src="${question.optionImages[index]}" alt="Option ${
+                  index + 1
+                }" class="option-image">`
+              : ""
+          }
+      `;
+          optionsContainer.appendChild(li);
+        });
+
+        // Add event listener to each radio button
+        document.querySelectorAll('input[name="answer"]').forEach((radio) => {
+          radio.addEventListener("change", checkAnswer);
+        });
+
+        document.getElementById("solutionContainer").textContent =
+          question.solution;
+        document.getElementById("solutionDetails").open = false;
+
+        updateNavButtons();
+      }
+
+      function checkAnswer(event) {
+        const selectedIndex = parseInt(event.target.value);
+        const correctIndex =
+          currentExam.questions[currentQuestionIndex].correctAnswer;
+
+        // Remove all existing tick marks
+        document
+          .querySelectorAll(".correct-answer")
+          .forEach((el) => el.classList.remove("correct-answer"));
+
+        // Add tick mark if the selected answer is correct
+        if (selectedIndex === correctIndex) {
+          event.target.nextElementSibling.classList.add("correct-answer");
+        }
+      }
+
+      function updateNavButtons() {
+        document.getElementById("prevButton").style.display =
+          currentQuestionIndex === 0 ? "none" : "inline-block";
+        document.getElementById("nextButton").style.display =
+          currentQuestionIndex === currentExam.questions.length - 1
+            ? "none"
+            : "inline-block";
+        document.getElementById("closeButton").textContent =
+          currentQuestionIndex === currentExam.questions.length - 1
+            ? "Submit"
+            : "Close";
+      }
+
+      function navigate(direction) {
+        saveAnswer();
+        if (direction === "prev" && currentQuestionIndex > 0) {
+          currentQuestionIndex--;
+          loadQuestion();
+        } else if (
+          direction === "next" &&
+          currentQuestionIndex < currentExam.questions.length - 1
+        ) {
+          currentQuestionIndex++;
+          loadQuestion();
+        }
+      }
+
+      function saveAnswer() {
+        const selectedOption = document.querySelector(
+          'input[name="answer"]:checked'
+        );
+        if (selectedOption) {
+          answers[currentExam.questions[currentQuestionIndex].id] = parseInt(
+            selectedOption.value
+          );
+        }
+      }
+
+      function submitExam() {
+        saveAnswer();
+        clearInterval(timerInterval);
+        document.getElementById("questionPage").style.display = "none";
+        document.getElementById("resultsPage").style.display = "block";
+
+        const attendedCount = Object.keys(answers).length;
+        document.getElementById("attendedQuestions").textContent =
+          attendedCount;
+        document.getElementById("unattendedQuestions").textContent =
+          currentExam.questions.length - attendedCount;
+
+        // Show correct and incorrect answers
+        const resultsContainer = document.createElement("div");
+        resultsContainer.id = "resultsContainer";
+        currentExam.questions.forEach((question, index) => {
+          const questionResult = document.createElement("div");
+          questionResult.classList.add("question-result");
+          const userAnswer = answers[question.id];
+          const isCorrect = userAnswer === question.correctAnswer;
+          questionResult.innerHTML = `
+            <p><strong>Question ${index + 1}:</strong> ${question.text}</p>
+            <p>Your answer: ${
+              userAnswer !== undefined
+                ? question.options[userAnswer]
+                : "Not answered"
+            }</p>
+            <p>Correct answer: ${question.options[question.correctAnswer]}</p>
+            <p class="${isCorrect ? "correct" : "incorrect"}">${
+            isCorrect ? "Correct" : "Incorrect"
+          }</p>
+          `;
+          resultsContainer.appendChild(questionResult);
+        });
+        document.getElementById("resultsPage").appendChild(resultsContainer);
+
+        // Add Home button
+        const homeButton = document.createElement("button");
+        homeButton.textContent = "Home";
+        homeButton.addEventListener("click", ()=>location.reload());
+        document.getElementById("resultsPage").appendChild(homeButton);
+      }
+
+      // function goHome() {
+      //   document.getElementById("resultsPage").style.display = "none";
+      //   document.getElementById("examList").style.display = "block";
+      //   // Clear results
+      //   const resultsContainer = document.getElementById("resultsContainer");
+      //   if (resultsContainer) {
+      //     resultsContainer.remove();
+      //   }
+      //   // Reset exam state
+      //   currentExam = null;
+      //   currentQuestionIndex = 0;
+      //   answers = {};
+      // }
+      function startTimer(duration) {
+        let timer = duration;
+        timerInterval = setInterval(() => {
+          const hours = Math.floor(timer / 3600);
+          const minutes = Math.floor((timer % 3600) / 60);
+          const seconds = timer % 60;
+          document.getElementById("timer").textContent = `${String(
+            hours
+          ).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(
+            seconds
+          ).padStart(2, "0")}`;
+          if (--timer < 0) {
+            clearInterval(timerInterval);
+            submitExam();
+          }
+        }, 1000);
+      }
+
+      function toggleFullscreen() {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen();
+        } else {
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          }
+        }
+      }
+
+      // function toggleDarkMode() {
+      //   document.body.classList.toggle("dark-mode");
+      // }
+
+      // Security measures
+      document.addEventListener("contextmenu", (event) =>
+        event.preventDefault()
+      );
+      document.addEventListener("keydown", (event) => {
+        if (
+          event.ctrlKey &&
+          (event.key === "u" ||
+            event.key === "s" ||
+            event.key === "i" ||
+            event.key === "p")
+        ) {
+          event.preventDefault();
+        }
+      });
+
+      // Event listeners
+      document
+        .getElementById("prevButton")
+        .addEventListener("click", () => navigate("prev"));
+      document
+        .getElementById("nextButton")
+        .addEventListener("click", () => navigate("next"));
+      document
+        .getElementById("closeButton")
+        .addEventListener("click", submitExam);
+      document
+        .getElementById("searchBar")
+        .addEventListener("input", (e) => populateExamList(e.target.value));
+      document
+        .getElementById("fullscreenBtn")
+        .addEventListener("click", toggleFullscreen);
+      // document
+      //   .getElementById("darkModeBtn")
+      //   .addEventListener("click", toggleDarkMode);
+
+      // Load exams when the page loads
+      document.addEventListener("DOMContentLoaded", loadExams);
+    </script>
+  </body>
+</html>

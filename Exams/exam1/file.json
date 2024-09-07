@@ -1,0 +1,35 @@
+{
+  "id": "math_exam_01",
+  "title": "Basic Mathematics Exam",
+  "duration": 5,
+  "questions": [
+    {
+      "id": 1,
+      "text": "What is 2 + 2?",
+      "options": ["3", "4", "5", "6"],
+      "correctAnswer": 1,
+      "solution": "2 + 2 = 4",
+      "image": "/Exams/math/images/question1.jpg",
+      "optionImages": [
+        "/Exams/math/images/option1_1.jpg",
+        "/Exams/math/images/option1_2.jpg",
+        "/Exams/math/images/option1_3.jpg",
+        "/Exams/math/images/option1_4.jpg"
+      ]
+    },
+    {
+      "id": 2,
+      "text": "What is 5 x 3?",
+      "options": ["10", "15", "20", "25"],
+      "correctAnswer": 1,
+      "solution": "5 x 3 = 15",
+      "image": "/Exams/math/images/question2.jpg",
+      "optionImages": [
+        "/Exams/math/images/option2_1.jpg",
+        "/Exams/math/images/option2_2.jpg",
+        "/Exams/math/images/option2_3.jpg",
+        "/Exams/math/images/option2_4.jpg"
+      ]
+    }
+  ]
+}
